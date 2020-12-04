@@ -5,12 +5,63 @@ use std::collections::*;
 fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
-    let res = _day4(input.trim());
+    let res = _day5(input.trim());
     println!("{}", res);
 }
 
-fn _day4(input : &str) -> usize {
+fn _day5(input : &str) -> usize {
     input.len()
+}
+
+fn _day4(input : &str) -> usize {
+    let must_have = ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"];
+    input.split("\n\n").filter_map(|chunk| {
+        let keys : HashMap<_, _> = chunk.split_whitespace().map(|token| { 
+            let mut kv = token.split(":").take(2);
+            (kv.next().unwrap(), kv.next().unwrap())
+        }).collect();
+        if must_have.iter().all(|s| keys.contains_key(s)) {
+            Some(keys)
+        } else {
+            None
+        }
+    }).filter(|hash_map| {
+        let eyes : HashSet<_> = vec!["amb", "blu", "brn", "gry", "grn", "hzl", "oth" ].into_iter().collect();
+        let bools = vec![
+            hash_map.get("byr").unwrap().parse::<usize>().map(|v| v >= 1920 && v <= 2002).unwrap_or(false),
+            hash_map.get("iyr").unwrap().parse::<usize>().map(|v| v >= 2010 && v <= 2020).unwrap_or(false),
+            hash_map.get("eyr").unwrap().parse::<usize>().map(|v| v >= 2020 && v <= 2030).unwrap_or(false),
+            {
+                let height = hash_map.get("hgt").unwrap();
+                let num_s : String = height.chars().take_while(|c| c.is_digit(10)).collect();
+                let num = num_s.parse::<usize>().unwrap();
+                let measure : String = height.chars().skip_while(|u| u.is_digit(10)).collect();
+                match measure.as_ref() {
+                    "in" => num >= 59 && num <= 76,
+                    "cm" => num >= 150 && num <= 193,
+                    _ => false
+                }
+            },
+            {
+                let s = hash_map.get("hcl").unwrap();
+                s.chars().take(1).next().unwrap() == '#' && s.chars().skip(1).all(|v| v.is_digit(16))
+            },
+            eyes.contains(hash_map.get("ecl").unwrap()),
+            { 
+               let pid = hash_map.get("pid").unwrap();
+               pid.len() == 9 && pid.chars().all(|c| c.is_digit(10))
+            }
+        ];
+        bools.into_iter().all(|b| b)
+    }).count()
+}
+
+fn _day4_0(input : &str) -> usize {
+    let must_have = ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"];
+    input.split("\n\n").filter(|chunk| {
+        let keys : HashSet<_> = chunk.split_whitespace().map(|token| token.split(":").next().unwrap()).collect();
+        must_have.iter().all(|s| keys.contains(s))
+    }).count()
 }
 
 fn _day3(input : &str) -> usize {
@@ -32,7 +83,7 @@ fn _day3(input : &str) -> usize {
         }
         trees
     }
-    return vec!{(1,1), (3,1), (5,1), (7,1), (1,2)}.into_iter()
+    vec![(1,1), (3,1), (5,1), (7,1), (1,2)].into_iter()
         .map(|(dx, dy)| single_run(&lines, dx, dy))
         .product()
 }
