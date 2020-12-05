@@ -10,7 +10,61 @@ fn main() {
 }
 
 fn _day5(input : &str) -> usize {
-    input.len()
+    let seats = input.lines().map(|line| {
+        let (mut min, mut max) = (0, 127);
+        for c in line.chars().take(7) {
+            match c {
+                'B' => min += (max - min + 1) / 2,
+                'F' => max -= (max - min) / 2,
+                _ => panic!(),
+            }
+        }
+        let row = min;
+
+        let (mut min, mut max) = (0, 7);
+        for c in line.chars().skip(7).take(3) {
+            match c {
+                'R' => min += (max - min + 1) / 2,
+                'L' => max -= (max - min) / 2,
+                _ => panic!()
+            }
+        }
+        let col = min;
+        row * 8 + col
+    }).collect::<BTreeSet<_>>();
+    let mut prev = 0;
+    for s in seats {
+        if s - prev == 2 {
+            return s- 1;
+        }
+        prev = s;
+    }
+    0
+}
+
+fn _day5_0(input : &str) -> usize {
+    input.lines().map(|line| {
+        let (mut min, mut max) = (0, 127);
+        for c in line.chars().take(7) {
+            match c {
+                'B' => min += (max - min + 1) / 2,
+                'F' => max -= (max - min) / 2,
+                _ => unimplemented!(),
+            }
+        }
+        let row = min;
+
+        let (mut min, mut max) = (0, 7);
+        for c in line.chars().skip(7).take(3) {
+            match c {
+                'R' => min += (max - min + 1) / 2,
+                'L' => max -= (max - min) / 2,
+                _ => unimplemented!(),
+            }
+        }
+        let col = min;
+        row * 8 + col
+    }).max().unwrap()
 }
 
 fn _day4(input : &str) -> usize {
@@ -33,8 +87,7 @@ fn _day4(input : &str) -> usize {
             hash_map.get("eyr").unwrap().parse::<usize>().map(|v| v >= 2020 && v <= 2030).unwrap_or(false),
             {
                 let height = hash_map.get("hgt").unwrap();
-                let num_s : String = height.chars().take_while(|c| c.is_digit(10)).collect();
-                let num = num_s.parse::<usize>().unwrap();
+                let num = height.chars().take_while(|c| c.is_digit(10)).collect::<String>().parse::<usize>().unwrap();
                 let measure : String = height.chars().skip_while(|u| u.is_digit(10)).collect();
                 match measure.as_ref() {
                     "in" => num >= 59 && num <= 76,
