@@ -5,8 +5,26 @@ use std::collections::*;
 fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
-    let res = _day5(input.trim());
+    let res = _day6(input.trim());
     println!("{}", res);
+}
+
+fn _day6(input : &str) -> usize {
+    input.split("\n\n").map(|s| {
+        let num_people = s.split("\n").count();
+        let mut set : HashMap<char, usize> = HashMap::new();
+        for c in s.chars().filter(|c| c.is_alphabetic()) {
+            set.insert(c, *set.get(&c).unwrap_or(&0) + 1);
+        }
+        set.values()
+            .filter(|v| **v == num_people).count()
+    }).sum()
+}
+
+fn _day6_0(input : &str) -> usize {
+    input.split("\n\n").map(|s| {
+        s.chars().filter(|c| c.is_alphabetic()).collect::<HashSet<_>>().len()
+    }).sum()
 }
 
 fn _day5(input : &str) -> usize {
@@ -26,7 +44,7 @@ fn _day5(input : &str) -> usize {
             match c {
                 'R' => min += (max - min + 1) / 2,
                 'L' => max -= (max - min) / 2,
-                _ => panic!()
+                _ => panic!(),
             }
         }
         let col = min;
