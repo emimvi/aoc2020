@@ -5,8 +5,77 @@ use std::collections::*;
 fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
-    let res = _day6(input.trim());
+    let res = _day7(input.trim());
     println!("{}", res);
+}
+
+fn _day7(input : &str) -> usize {
+    let mapping : HashMap<String, Vec<(String, usize)>> = input.lines().map(|l| {
+        let key = l.split_whitespace().take(2).collect::<String>();
+        let mut ptr = l.split_whitespace().skip(4);
+        let mut adjacent : Vec<(String, usize)> = Vec::new();
+        loop {
+            match ptr.next() {
+                Some("no") | None => break,
+                Some(other) => { 
+                    let mut k = String::from(ptr.next().unwrap());
+                    k.push_str(ptr.next().unwrap());
+                    let v = other.parse::<usize>().unwrap();
+                    adjacent.push((k, v));
+
+                    let _ = ptr.next();
+                }
+            }
+        }
+        (key, adjacent)
+    }).collect();
+
+    fn traverse(mapping : &HashMap<String, Vec<(String, usize)>>, key : &str) -> usize {
+        let s : usize = mapping.get(key).unwrap().iter().map(|(ref k, ref v)| {
+            v * traverse(&mapping, k)
+        }).sum();
+        s + 1
+    }
+
+    traverse(&mapping, "shinygold") - 1
+}
+
+fn _day7_0(input : &str) -> usize {
+    let mapping : HashMap<String, Vec<(String, usize)>> = input.lines().map(|l| {
+        let key = l.split_whitespace().take(2).collect::<String>();
+        let mut ptr = l.split_whitespace().skip(4);
+        let mut adjacent : Vec<(String, usize)> = Vec::new();
+        loop {
+            match ptr.next() {
+                Some("no") | None => break,
+                Some(other) => { 
+                    let mut k = String::from(ptr.next().unwrap());
+                    k.push_str(ptr.next().unwrap());
+                    let v = other.parse::<usize>().unwrap();
+                    adjacent.push((k, v));
+
+                    let _ = ptr.next();
+                }
+            }
+        }
+        (key, adjacent)
+    }).collect();
+
+
+    fn traverse(mapping : &HashMap<String, Vec<(String, usize)>>, key : &str) -> bool {
+        let mut res = false;
+        for (k, _) in mapping.get(key).unwrap().iter() {
+            match k.as_ref() {
+                "shinygold" => return true,
+                other => res |= traverse(mapping, other),
+            }
+        }
+        res
+    }
+
+    mapping.iter().filter(|(k,_)| {
+        traverse(&mapping, k)
+    }).count()
 }
 
 fn _day6(input : &str) -> usize {
