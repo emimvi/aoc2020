@@ -5,8 +5,174 @@ use std::collections::*;
 fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
-    let res = _day7(input.trim());
-    println!("{}", res);
+    let res = _day10(input.trim());
+    println!("{:?}", res);
+}
+
+fn _day10(input : &str) -> usize {
+    let mut adapters : Vec<usize> = (0..1).into_iter().chain(input.lines().map(|l| l.trim().parse::<usize>().unwrap())).collect();
+    adapters.sort();
+    adapters.push(adapters.last().unwrap() + 3);
+    let removable = adapters.windows(3).map(|slice| {
+        if slice[2] - slice[0] <=3 {
+            1 
+        } else {
+            0
+        }
+    }).collect::<Vec<_>>();
+    let mut v = Vec::new();
+    let mut i = 0;
+    for &n in &removable {
+        if n == 1 {
+            i += 1;
+        } else if i != 0 {
+            v.push(i);
+            i = 0;
+        }
+    }
+    v.iter().map(|n| {
+        match n {
+            1 => 2,
+            2 => 4,
+            3 => 7,
+            _ => panic!()
+        }
+    }).product()
+}
+
+fn _day10_0(input : &str) -> usize {
+    let mut adapters : Vec<usize> = (0..1).into_iter().chain(input.lines().map(|l| l.parse::<usize>().unwrap())).collect();
+    adapters.sort();
+    adapters.push(adapters.last().unwrap() + 3);
+    let iter1 = adapters.windows(2).map(|slice| slice[1] - slice[0]);
+    let iter2 = iter1.clone();
+    iter1.filter(|n| *n==3).count() * iter2.filter(|n| *n == 1).count()
+}
+
+fn _day9(input : &str) -> usize {
+    let nums = input.lines().map(|l| l.parse::<usize>().unwrap()).collect::<Vec<_>>();
+    let running_sums = nums.iter().skip(1).fold(vec!(nums[0]), |mut acc, e| {
+        acc.push(acc.iter().last().unwrap() + e);
+        acc
+    });
+    
+    let target = 23278925;
+    for i in 0..nums.len() {
+        for j in i..nums.len() {
+            if running_sums[j] - running_sums[i] == target {
+                return nums[i..j].iter().max().unwrap() + nums[i..j].iter().min().unwrap();
+            }
+        }
+    }
+
+    panic!()
+}
+
+fn _day9_0(input : &str) -> usize {
+    let nums = input.lines().map(|l| l.parse::<usize>().unwrap()).collect::<Vec<_>>();
+
+    fn check(slice : &[usize], n : usize) -> bool {
+        for (i, a) in slice.iter().enumerate() {
+            for b in slice[i..].iter() {
+                if a + b == n {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    let preamble_len = 25;
+    for i in preamble_len..nums.len() {
+        let n = nums[i];
+        if !check(&nums[(i-preamble_len)..i], n) {
+            return n;
+        }
+    }
+
+    panic!()
+}
+
+enum _PResult {
+    Loop(i32),
+    End(i32)
+}
+
+fn execute_program(program : &[(&str, i32)]) -> _PResult {
+    let mut visited = HashSet::new();
+    let lines = program;
+    let mut acc = 0;
+    let mut pc : usize = 1;
+    loop {
+        if visited.contains(&pc) {
+            return _PResult::Loop(acc);
+        } else if pc == program.len() + 1 {
+            return _PResult::End(acc)
+        }
+        let (cmd, arg) = lines[pc-1 as usize];
+        //println!("{} {}", cmd, arg);
+        visited.insert(pc);
+        match cmd {
+            "jmp" => {
+                pc = (pc as i32 + arg) as usize;
+                continue;
+            },
+            "acc" => acc += arg,
+            "nop" => {},
+            _ => unimplemented!()
+        }
+        pc += 1;
+    }
+}
+
+fn _day8(input : &str) -> i32 {
+    let lines = input.lines().map(|l| {
+        let mut inst_iter = l.split_whitespace();
+        let cmd = inst_iter.next().unwrap();
+        let arg = inst_iter.next().unwrap().parse::<i32>().unwrap();
+        (cmd, arg)
+    }).collect::<Vec<_>>();
+    let mut program = lines.clone();
+    for (i, (cmd, _)) in lines.iter().enumerate().filter(|(_, (c, _))| *c != "acc") {
+        program[i].0 = match *cmd {
+            "nop" => "jmp",
+            "jmp" => "nop",
+            _ => panic!()
+        };
+        if let _PResult::End(n) = execute_program(&program) {
+            return n;
+        }
+        program = lines.clone();
+    }
+    unreachable!()
+}
+
+fn _day8_0(input : &str) -> i32 {
+    let mut visited = HashSet::new();
+    let lines = input.lines().collect::<Vec<_>>();
+    let mut acc = 0;
+    let mut pc : usize = 0;
+    loop {
+        if visited.contains(&pc) {
+            break;
+        }
+        let mut inst_iter = lines[pc as usize].split_whitespace();
+        let cmd = inst_iter.next().unwrap();
+        let arg = inst_iter.next().unwrap().parse::<i32>().unwrap();
+        println!("{} {} {}", pc+1, cmd, arg);
+        match cmd {
+            "jmp" if pc == lines.len()-1 => {}, //jmp to nop
+            "jmp" => {
+                pc = (pc as i32 + arg) as usize;
+                continue;
+            },
+            "acc" => acc += arg,
+            "nop" => {},
+            _ => unimplemented!()
+        }
+        visited.insert(pc);
+        pc += 1;
+    }
+    acc
 }
 
 fn _day7(input : &str) -> usize {
