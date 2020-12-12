@@ -5,8 +5,211 @@ use std::collections::*;
 fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
-    let res = _day10(input.trim());
+    let res = _day12(input.trim());
     println!("{:?}", res);
+}
+
+fn _day12(input : &str) -> usize {
+    let parsed = input.lines().map(|l| {
+        let mut iter = l.chars();
+        let dir = iter.next().unwrap();
+        let n = iter.as_str().parse::<i32>().unwrap();
+        (dir, n)
+    });
+    let (mut wx, mut wy) = (10, 1);
+    let (mut x, mut y) = (0, 0);
+    let rotate = |deg, wx : i32, wy : i32| -> (i32, i32) {
+        match deg {
+                90 => (wy, -wx),
+                180 => (wx * -1, wy * -1),
+                270 => (-wy,wx),
+            _ => panic!()
+        }
+    };
+    for (dir, i) in parsed
+    {
+        match dir {
+            'S' => wy -= i,
+            'W' => wx -= i,
+            'E' => wx += i,
+            'N' => wy += i,
+            'R' => { 
+                let (nx, ny) = rotate(i, wx, wy); 
+                wx = nx;
+                wy = ny;
+            },
+            'L' => {
+                let (nx, ny) = rotate(360-i, wx, wy); 
+                wx = nx;
+                wy = ny;
+            }
+            'F' => { x += wx * i; y += wy * i; }
+            _ => panic!()
+        }
+        println!("{} {} | {} {}",x, y, wx, wy);
+    }
+    (x.abs()+y.abs()) as usize
+}
+
+fn _day12_0(input : &str) -> usize {
+    let parsed = input.lines().map(|l| {
+        let mut iter = l.chars();
+        let dir = iter.next().unwrap();
+        let n = iter.as_str().parse::<i32>().unwrap();
+        (dir, n)
+    });
+    let dirs = ['S', 'W', 'N', 'E'];
+    let mut dir_iter = dirs.iter().cycle();
+    let mut front = 'E';
+    let (mut x, mut y) = (0, 0);
+    for (dir, i) in parsed
+    {
+        let d = if dir == 'F' { front } else { dir };
+        match d {
+            'S' => y -= i,
+            'W' => x -= i,
+            'E' => x += i,
+            'N' => y += i,
+            'R' => for _ in 0..(i/90) {front = *dir_iter.next().unwrap()},
+            'L' => for _ in 0..((360-i)/90) {front = *dir_iter.next().unwrap()},
+            // 'F' => {},
+            _ => panic!()
+        }
+        println!("F {}, {} {}", front, x, y);
+    }
+    (x.abs()+y.abs()) as usize
+}
+
+fn _day11(input : &str) -> usize {
+    fn adjacent(grid : &[Vec<char>], x : i32, y : i32) -> (i32, i32) {
+        let getter = |x : i32, y : i32, dx : i32, dy : i32| -> char {
+            let mut x = x + dx;
+            let mut y = y + dy;
+            loop {
+                if x < 0 || y < 0 {
+                    return '.';
+                }
+                match grid.get(y as usize).map(|v| v.get(x as usize)).unwrap_or(None) {
+                    None => return '.',
+                    Some('.') => {
+                        x += dx;
+                        y += dy;
+                    },
+                    Some(c) => return *c,
+                }
+            }
+        };
+        let dirs = [(-1, -1), 
+                    (-1, 1),
+                    (-1, 0),
+                    (1, -1), 
+                    (1, 1), 
+                    (1, 0), 
+                    (0, 1), 
+                    (0, -1)];
+        let (mut empty, mut occ) = (0, 0);
+
+        for (dx, dy) in dirs.iter() {
+            let c = getter(x, y, *dx, *dy);
+            if c == 'L' {
+                empty += 1;
+            } else if c == '#' {
+                occ += 1;
+            }
+        }
+        (empty, occ)
+    }
+
+    let mut grid : Vec<Vec<char>> = input.lines().map(|l| {
+        l.chars().collect::<Vec<char>>()
+    }).collect();
+    let mut next = grid.clone();
+    let mut changed = false;
+    let mut i = -1;
+    loop {
+        for y in 0..grid.len() {
+            for x in 0..grid[0].len() {
+                let (_, occ) = adjacent(&grid, x as i32, y as i32);
+                match grid[y][x] {
+                    'L' if occ == 0 => next[y][x] = '#',
+                    '#' if occ >= 5 => next[y][x] = 'L',
+                    _ => {}
+                }
+                changed |= grid[y][x] != next[y][x];
+            }
+        }
+        let pr = next.iter().map(|l| l.iter().collect::<String>()).collect::<Vec<_>>();
+
+        i -= 1;
+        if i == 0 {
+            return 0;
+        }
+        if !changed  {
+            return grid.iter().map(|l| l.iter().filter(|&c| *c == '#').count()).sum()
+        } else {
+            changed = false;
+            grid = next;
+            next = grid.clone();
+        }
+    }
+}
+
+fn _day11_0(input : &str) -> usize {
+    fn adjacent(grid : &[Vec<char>], x : i32, y : i32) -> (i32, i32) {
+        let (mut empty, mut occ) = (0, 0);
+        let xmin = (x-1).max(0);
+        let xmax = (x+1).min(grid[0].len() as i32 -1);
+        let ymin = (y-1).max(0);
+        let ymax = (y+1).min(grid.len() as i32 -1);
+        for i in xmin..=xmax {
+        for j in ymin..=ymax {
+            if i == x && y == j {
+                continue;
+            }
+            let c = grid[j as usize][i as usize];
+            if c == 'L' {
+                empty += 1;
+            } else if c == '#' {
+                occ += 1;
+            }
+        }
+        }
+        (empty, occ)
+    }
+
+    let mut grid : Vec<Vec<char>> = input.lines().map(|l| {
+        l.chars().collect::<Vec<char>>()
+    }).collect();
+    let mut next = grid.clone();
+    let mut changed = false;
+    let mut i = -1;
+    loop {
+        for y in 0..grid.len() {
+            for x in 0..grid[0].len() {
+                let (_, occ) = adjacent(&grid, x as i32, y as i32);
+                match grid[y][x] {
+                    'L' if occ == 0 => next[y][x] = '#',
+                    '#' if occ >= 4 => next[y][x] = 'L',
+                    _ => {}
+                }
+                changed |= grid[y][x] != next[y][x];
+            }
+        }
+        let pr = next.iter().map(|l| l.iter().collect::<String>()).collect::<Vec<_>>();
+        println!("{}", pr.join("\n"));
+        println!("            ");
+        i -= 1;
+        if i == 0 {
+            return 0;
+        }
+        if !changed  {
+            return grid.iter().map(|l| l.iter().filter(|&c| *c == '#').count()).sum()
+        } else {
+            changed = false;
+            grid = next;
+            next = grid.clone();
+        }
+    }
 }
 
 fn _day10(input : &str) -> usize {
