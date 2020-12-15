@@ -5,8 +5,216 @@ use std::collections::*;
 fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
-    let res = _day12(input.trim());
+    let res = _day15(input.trim());
     println!("{:?}", res);
+}
+
+fn _day15(input : &str) -> usize {
+    let mut prev = 0;
+    let mut map = input.split(",").enumerate().map(|(i, s)| {
+        let n = s.parse::<usize>().unwrap();
+        prev = n;
+        (n, i+1)
+    }).collect::<HashMap<_,_>>();
+    let _ = map.remove(&prev);
+    let iterations = 30000000;
+    for i in map.len()+2..=iterations {
+        let next = if let Some(n) = map.get(&prev) {
+            (i-1) - n
+        } else {
+            0
+        };
+        map.insert(prev, i-1);
+        prev = next;
+        if i == iterations {
+            return prev;
+        }
+    }
+    panic!()
+}
+
+fn _day14(input : &str) -> usize {
+    fn parse_mask(line : &str) -> Vec<(usize, char)> {
+        line
+        .split_whitespace()
+        .skip(2)
+        .next().unwrap()
+        .chars()
+        .rev()
+        .enumerate()
+        .collect::<Vec<_>>()
+    }
+    fn parse_write(l : &str) -> (usize, usize)  {
+        let mut it = l.split_whitespace();
+        let address = it.next().unwrap().chars().skip(4).take_while(|c| c.is_digit(10)).collect::<String>().parse::<usize>().unwrap();
+        let val = it.skip(1).next().unwrap().parse::<usize>().unwrap();
+        (address,val)
+    }
+
+    fn combinations(res : &mut Vec<usize>, mask : &Vec<usize>, n : usize) {
+        let mut temp = Vec::new();
+        for i in res.iter() {
+            temp.push(i + (1 << mask[n]));
+        }
+        res.extend(temp);
+        if n + 1 < mask.len() {
+            combinations(res, mask, n+1);
+        }
+    }
+
+    let mut memory  = HashMap::new();
+    let mut mask = Vec::new();
+    for l in input.lines()
+    {
+        if l.as_bytes()[1] == b'a' {
+            mask = parse_mask(l);
+        } else {
+            let (mut masked, r) = parse_write(l);
+            for i in mask.iter().filter_map(|&(i,c)| if c == 'X' { Some(i) } else { None }) {
+                masked = masked & !(1 << i);
+            }
+            for i in mask.iter().filter_map(|&(i,c)| if c == '1' { Some(i) } else { None }) {
+                masked |= 1 << i;
+            }
+            let xes = mask.iter().filter_map(|&(i,c)| if c == 'X' { Some(i) } else { None }).collect::<Vec<_>>();
+            let mut addresses = vec![masked];
+            combinations(&mut addresses, &xes, 0);
+            for a in addresses { 
+                memory.insert(a, r);
+            }
+        }
+    }
+    memory.values().sum()
+}
+
+fn _day14_0(input : &str) -> usize {
+    fn parse_mask(line : &str) -> Vec<(usize, usize)> {
+        line
+        .split_whitespace()
+        .skip(2)
+        .next().unwrap()
+        .chars()
+        .rev()
+        .enumerate()
+        .filter(|(_,c)| *c != 'X')
+        .map(|(i, c)| (i, c.to_digit(10).unwrap() as usize))
+        .collect::<Vec<_>>()
+    }
+    fn parse_write(l : &str, overwrites : &Vec<(usize, usize)>) -> (usize, usize)  {
+        let mut it = l.split_whitespace();
+        let address = it.next().unwrap().chars().skip(4).take_while(|c| c.is_digit(10)).collect::<String>().parse::<usize>().unwrap();
+        let val = it.skip(1).next().unwrap().parse::<usize>().unwrap();
+        // (address, val)
+        let mut r = val;
+        for &(i, o) in overwrites {
+            if o == 0 {
+                r = r & !(1 << i);
+            } else {
+                r |= 1 << i;
+            }
+        }
+        (address,r)
+    }
+    let mut memory  = HashMap::new();
+    let mut mask = Vec::new();
+    for l in input.lines()
+    {
+        if l.as_bytes()[1] as char == 'a' {
+            mask = parse_mask(l);
+        } else {
+            let (a, r) = parse_write(l, &mask);
+            memory.insert(a, r);
+        }
+    }
+    memory.values().sum()
+}
+
+
+fn steps_needed(n : usize, p_a : usize, p_b : usize) -> usize {
+    let step_size = p_a % p_b;
+    let current_step = n % p_b;
+    if current_step == 0 {
+        return 0;
+    }
+    let steps_needed = if current_step == 0 { 0} else {step_size * p_b % current_step};
+    let need2 = (p_b-current_step)/step_size;
+    let mut brute = current_step;
+    let mut brute_need = 0;
+    while brute % p_b != 0 {
+        brute += step_size;
+        brute_need += 1;
+    }
+    // println!("N {}, Pa {}, Pb {}", n, p_a, p_b);
+    // println!("ss {}, cur {}, ned {} ned2 {}", step_size, current_step, steps_needed, need2);
+    // println!("");
+    // println!("");
+    brute_need
+}
+
+fn _day13(input : &str) -> usize {
+    let ids = input.lines().next().unwrap().split(",").enumerate().filter(|(_, id)| *id != "x").map(|(n, i)| (n as usize,i.parse::<usize>().unwrap())).collect::<Vec<_>>();
+    println!("\t{:?}", ids);
+    // let (_, step) = ids[0];
+    let (s, step) = ids.iter().max_by(|(_, a), (_,b)| a.cmp(b)).unwrap();
+    let mut current_timestamp = step-s ;//step - s;
+    let mut cnt = 1;
+    loop {
+    // for _ in 0..100 {
+        let prev = current_timestamp.clone();
+        for f in ids.iter().filter(|(_, id)| id != step).map(|(i, id)| steps_needed(prev + i, *step, *id)) {
+            current_timestamp += f * step;
+        }
+        if prev == current_timestamp {
+            return current_timestamp;
+        }
+        // current_timestamp += f * step;
+        //                         100_000_000_000_000
+        //                          16_500_000_033_654
+        //                         100_000_000_000_000
+        if current_timestamp > cnt * 100_000_000_000 {
+            println!("{}", cnt);
+            cnt += 1;
+        }
+    }
+}
+fn _day13_2(input : &str) -> usize {
+    let ids = input.lines().next().unwrap().split(",").enumerate().filter(|(_, id)| *id != "x").map(|(n, i)| (n as usize,i.parse::<usize>().unwrap())).collect::<Vec<_>>();
+    println!("\t{:?}", ids);
+    // let (_, step) = ids[0];
+    let (s, step) = ids.iter().max_by(|(_, a), (_,b)| a.cmp(b)).unwrap();
+    let mut current_timestamp = step-s ;//step - s;
+    let mut cnt = 1;
+    loop {
+    // for _ in 0..100 {
+        let f = ids.iter().filter(|(_, id)| id != step).map(|(i, id)| steps_needed(current_timestamp + i, *step, *id)).max().unwrap();
+        if f == 0 {
+            return current_timestamp;
+        }
+        current_timestamp += f * step;
+        //                         100_000_000_000_000
+        //                          16_500_000_033_654
+        //                         100_000_000_000_000
+        if current_timestamp > cnt *   100_000_000_000 {
+            let b4 = current_timestamp;
+            println!("{} + f{}*{} = {}", b4, f,step, current_timestamp);
+            cnt += 1;
+        }
+    }
+}
+
+fn _day13_0(input : &str) -> usize {
+    let mut iter = input.lines();
+    let n = iter.next().unwrap().parse::<usize>().unwrap();
+
+    let calc = |a| a - (n % a);
+
+    let ids = iter.next().unwrap().split(",").filter(|id| *id != "x").map(|i| i.parse::<usize>().unwrap()).collect::<Vec<_>>();
+    let min = ids.into_iter().inspect(|i| {
+        let m = n % i;
+        let r = i - m;
+        println!("{}: {} {}", i, m, r);
+    }).min_by(|a, b| (a - (n % a)).cmp(&(b - (n % b)))).unwrap();
+    min * calc(min)
 }
 
 fn _day12(input : &str) -> usize {
